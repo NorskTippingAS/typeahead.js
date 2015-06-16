@@ -1,5 +1,5 @@
 /*!
- * typeahead.js 0.11.1
+ * typeahead.js 0.11.2
  * https://github.com/twitter/typeahead.js
  * Copyright 2013-2015 Twitter, Inc. and other contributors; Licensed MIT
  */
@@ -151,7 +151,7 @@
             noop: function() {}
         };
     }();
-    var VERSION = "0.11.1";
+    var VERSION = "0.11.2";
     var tokenizers = function() {
         "use strict";
         return {
@@ -1599,10 +1599,10 @@
             return null;
         };
         _.mixin(Dataset.prototype, EventEmitter, {
-            _overwrite: function overwrite(query, suggestions) {
+            _overwrite: function overwrite(query, suggestions, total) {
                 suggestions = suggestions || [];
                 if (suggestions.length) {
-                    this._renderSuggestions(query, suggestions);
+                    this._renderSuggestions(query, suggestions, total);
                 } else if (this.async && this.templates.pending) {
                     this._renderPending(query);
                 } else if (!this.async && this.templates.notFound) {
@@ -1623,11 +1623,11 @@
                 }
                 this.trigger("rendered", this.name, suggestions, true);
             },
-            _renderSuggestions: function renderSuggestions(query, suggestions) {
+            _renderSuggestions: function renderSuggestions(query, suggestions, total) {
                 var $fragment;
                 $fragment = this._getSuggestionsFragment(query, suggestions);
                 this.$lastSuggestion = $fragment.children().last();
-                this.$el.html($fragment).prepend(this._getHeader(query, suggestions)).append(this._getFooter(query, suggestions));
+                this.$el.html($fragment).prepend(this._getHeader(query, suggestions)).append(this._getFooter(query, suggestions, total));
             },
             _appendSuggestions: function appendSuggestions(query, suggestions) {
                 var $fragment, $lastSuggestion;
@@ -1672,11 +1672,12 @@
                 });
                 return $(fragment);
             },
-            _getFooter: function getFooter(query, suggestions) {
+            _getFooter: function getFooter(query, suggestions, total) {
                 return this.templates.footer ? this.templates.footer({
                     query: query,
                     suggestions: suggestions,
-                    dataset: this.name
+                    dataset: this.name,
+                    total: total
                 }) : null;
             },
             _getHeader: function getHeader(query, suggestions) {
@@ -1695,7 +1696,7 @@
                 }, obj) : obj;
             },
             update: function update(query) {
-                var that = this, canceled = false, syncCalled = false, rendered = 0;
+                var that = this, canceled = false, syncCalled = false, rendered = 0, total = 0;
                 this.cancel();
                 this.cancel = function cancel() {
                     canceled = true;
@@ -1708,10 +1709,11 @@
                     if (syncCalled) {
                         return;
                     }
+                    total = suggestions.length;
                     syncCalled = true;
                     suggestions = (suggestions || []).slice(0, that.limit);
                     rendered = suggestions.length;
-                    that._overwrite(query, suggestions);
+                    that._overwrite(query, suggestions, total);
                     if (rendered < that.limit && that.async) {
                         that.trigger("asyncRequested", query);
                     }
