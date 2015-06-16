@@ -85,12 +85,12 @@ var Dataset = (function() {
 
     // ### private
 
-    _overwrite: function overwrite(query, suggestions) {
+    _overwrite: function overwrite(query, suggestions, total) {
       suggestions = suggestions || [];
 
       // got suggestions: overwrite dom with suggestions
       if (suggestions.length) {
-        this._renderSuggestions(query, suggestions);
+        this._renderSuggestions(query, suggestions, total);
       }
 
       // no suggestions, expecting async: overwrite dom with pending
@@ -132,7 +132,7 @@ var Dataset = (function() {
       this.trigger('rendered', this.name, suggestions, true);
     },
 
-    _renderSuggestions: function renderSuggestions(query, suggestions) {
+    _renderSuggestions: function renderSuggestions(query, suggestions, total) {
       var $fragment;
 
       $fragment = this._getSuggestionsFragment(query, suggestions);
@@ -140,7 +140,7 @@ var Dataset = (function() {
 
       this.$el.html($fragment)
       .prepend(this._getHeader(query, suggestions))
-      .append(this._getFooter(query, suggestions));
+      .append(this._getFooter(query, suggestions, total));
     },
 
     _appendSuggestions: function appendSuggestions(query, suggestions) {
@@ -205,12 +205,13 @@ var Dataset = (function() {
       return $(fragment);
     },
 
-    _getFooter: function getFooter(query, suggestions) {
+    _getFooter: function getFooter(query, suggestions, total) {
       return this.templates.footer ?
         this.templates.footer({
           query: query,
           suggestions: suggestions,
-          dataset: this.name
+          dataset: this.name,
+          total: total
         }) : null;
     },
 
@@ -234,7 +235,7 @@ var Dataset = (function() {
     // ### public
 
     update: function update(query) {
-      var that = this, canceled = false, syncCalled = false, rendered = 0;
+      var that = this, canceled = false, syncCalled = false, rendered = 0, total = 0;
 
       // cancel possible pending update
       this.cancel();
@@ -251,11 +252,13 @@ var Dataset = (function() {
       function sync(suggestions) {
         if (syncCalled) { return; }
 
+        total = suggestions.length;
+
         syncCalled = true;
         suggestions = (suggestions || []).slice(0, that.limit);
         rendered = suggestions.length;
 
-        that._overwrite(query, suggestions);
+        that._overwrite(query, suggestions, total);
 
         if (rendered < that.limit && that.async) {
           that.trigger('asyncRequested', query);
